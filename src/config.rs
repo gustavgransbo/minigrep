@@ -7,12 +7,19 @@ pub struct Config {
 }
 
 impl Config {
-    pub fn new(args : &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Too few arguments provided");
-        }
-        let query = args[1].clone();
-        let filename = args[2].clone();
+    pub fn new(mut args : impl Iterator<Item = String>) -> Result<Config, &'static str> {
+        args.next();
+
+        let query = match args.next(){
+            Some(arg) => arg,
+            None => return Err("No query string provided")
+        };
+
+        let filename = match args.next() {
+            Some(arg) => arg,
+            None => return Err("No filename provided")
+        };
+
         let case_sensitive = env::var("CASE_INSENSITIVE").is_err();
 
         Ok(Config {query, filename, case_sensitive})
@@ -26,14 +33,14 @@ mod tests {
 
     #[test]
     fn new_config_too_few_arguments() {
-        let args = [String::from("foo"), String::from("bar")];
-        assert!(Config::new(&args).is_err());
+        let args = ["foo", "bar"].iter().map(|s| s.to_string());
+        assert!(Config::new(args).is_err());
     }
 
     #[test]
     fn new_config_ok() {
-        let args = [String::from("foo"), String::from("bar"), String::from("baz")];
-        let result = Config::new(&args);
+        let args = ["foo", "bar", "baz"].iter().map(|s| s.to_string());
+        let result = Config::new(args);
         match result {
             Ok(config) => {
                     assert_eq!(config.query, "bar");
@@ -45,8 +52,8 @@ mod tests {
 
     #[test]
     fn new_config_extra_arguments() {
-        let args = [String::from("foo"), String::from("bar"), String::from("baz"), String::from("qux")];
-        let result = Config::new(&args);
+        let args = ["foo", "bar", "baz", "qux"].iter().map(|s| s.to_string());
+        let result = Config::new(args);
         match result {
             Ok(config) => {
                     assert_eq!(config.query, "bar");
